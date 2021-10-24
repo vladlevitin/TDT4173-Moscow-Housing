@@ -13,12 +13,14 @@ const svg = canvas.append("svg")
     .attr("transform",
           `translate(${margin.left}, ${margin.top})`);
 
-const layer_appartment = [
+// Make several layers
+const layers1 = [
   new deck.ScatterplotLayer({
     // data
     getFillColor: d => d.color,
     getRadius: d => d.radius
-  })
+  }),
+
 ]
 
 // https://gisgeography.com/wgs84-world-geodetic-system/
@@ -26,15 +28,18 @@ const layer_appartment = [
     new deck.DeckGL({
       mapStyle: 'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json',
       initialViewState: {
-        longitude: 37.6155,
-        latitude: 55.75222,
+        // Center Moscow
+        //longitude: 37.6155,
+        //latitude: 55.75222,
+        longitude: 37.741109,
+        latitude: 55.59516,
         zoom: 15
       },
       controller: true,
       layers: [
         new deck.ScatterplotLayer({
           data: [
-            {position: [37.6155, 55.75222], color: [255, 0, 0], radius: 100}
+            {position: [37.741109, 55.59516], color: [255, 0, 0], radius: 100}
           ],
           getFillColor: d => d.color,
           getRadius: d => d.radius
