@@ -8,6 +8,12 @@
     - Districs are missing in both datasets - they can possibly be retreived by searching for neighbouring buildings (130 examples in test set)
     
     - There are extreme outliers in area_total and price
+
+* Observed in data:
+    - Square meter prices highest in district 0 and 7
+    - Square meter prices are higher for closer distance to center, but there is still low-price apartments in these areas
+    - The bigest apartments are in the center
+    - z-scores are bad for apartments with the highest prices
     
 * Price of apartment may vary according to:
     - distance to center (use distance.py to calculate distances based on latitude and longitudes)
