@@ -9,7 +9,15 @@
     
     - There are extreme outliers in area_total and price
     
-* Moscow metro stations: 'https://en.wikipedia.org/wiki/Module:Location_map/data/Moscow_Metro'
+* Price of apartment may vary according to:
+    - distance to center (use distance.py to calculate distances based on latitude and longitudes)
+    - distance to nearest metro station (walking time)
+    - traveltime from metro station to central Moscow
+    - if the metro is within one of the two ring metro lines (or outside)
+    
+* Moscow 252 metro stations: 'https://en.wikipedia.org/wiki/Module:Location_map/data/Moscow_Metro'
+
+* Komsomolskaya metro station - linked to three railway stations
 
 * List of Moscow metro stations: 'https://en.wikipedia.org/wiki/List_of_Moscow_Metro_stations'
 
