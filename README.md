@@ -1,13 +1,13 @@
 ## Visualizing data
 * Using online tool kepler.gl to locate datapoints based on latitude and longitude in Moscow
 * Identifying flaws in dataset:
-    - In training set: two buildings are not in Moscow but on St Johns and near Vladivostock (are coordinates wrong?)
+    - In testing set: seven buildings are not in Moscow. Four are  St Johns, in Kirgistan (building id 4412) and two near Vladivostock. For the ones left the coordinates are wrong (can be adjusted by searching street)
 
-    - In test set: one building is in Kyrgiztan, Bishkek (building id 4412)
+    - In training set: complete lat/long, all within 70 km distance to center.
 
     - Districs are missing in both datasets - they can possibly be retreived by searching for neighbouring buildings (130 examples in test set)
 
-    - There are extreme outliers in area_total and price
+    - There are extreme outliers in area_total and price, but this seems reasonable. The bigest flats are full top floors on buildings in central Moscow.
 
 * Observed in data:
     - Square meter prices highest in district 0 and 7
