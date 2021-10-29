@@ -1,6 +1,6 @@
 import numpy as np
-import pandas as pd
-import math  # degrees to radians
+import math                        # degrees to radians
+from sklearn.utils import shuffle  # To randomize sequence of data
 
 # The Haversine formula
 # https://en.wikipedia.org/wiki/Haversine_formula
@@ -23,3 +23,15 @@ def get_distance(lat1, lon1, lat2=55.751244, lon2=37.618423):
 
 def norm_features(X):
     return (X - X.mean())/ (1.0 * X.std())
+
+
+def split_random(X, p):
+    length = X.shape[0]
+    X = shuffle(X)
+    split_at = int(length * p)
+    x_train = X[:split_at].iloc[:,1:]
+    x_test = X[split_at:].iloc[:,1:]
+    y_train = X[:split_at].iloc[:,:1]
+    y_test = X[split_at:].iloc[:,:1]
+    return x_train, y_train, x_test, y_test
+    

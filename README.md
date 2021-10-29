@@ -21,6 +21,52 @@
     - traveltime from metro station to central Moscow
     - if the metro is within one of the two ring metro lines (or outside)
     
+* Training set values:
+The following are complete:
+    - price
+    - area_total
+    - floor
+    - rooms
+    - latitude
+    - longitude
+    - street
+    - address
+    - stories
+    
+Partly complete:
+    - phones
+    - new
+    - district
+    - constructed (year)
+    - elevator_without
+    - elevator_person
+    - elevator_service
+    
+Missing more values:
+    - kitchen_area
+    - living_area
+    - bathrooms_shared
+    - bathrooms_private
+    - material
+    
+Missing about half or even more:
+    - seller
+    - ceiling (height)
+    - balconies
+    - loggias
+    - condition
+    - parking
+    - garbage_chute
+    - heating
+    
+* Test set missing values:
+    - 4 items with wrong long/lat, get adress --> belong to district 11, lat(55.544045999) long(37.478055) = building id 4636 (two ap), 4412 (two ap)
+    - Possibly worng long/lat? building id 4202 (one ap) - probably correct, no match on street.
+    - Possibly woring long/lat? building id 5667 (one ap) no other hits on building in test set (what about training set?)
+    - Two rows missing lat/long for building id 3803 (two ap) belong to street with other apartements (their lat: 55.560891000 long: 37.47376099999, district 11)
+    
+    
+    
 * Moscow 252 metro stations: 'https://en.wikipedia.org/wiki/Module:Location_map/data/Moscow_Metro'
 
 * Komsomolskaya metro station - linked to three railway stations
