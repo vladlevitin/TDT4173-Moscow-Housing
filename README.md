@@ -1,11 +1,11 @@
 ## Visualizing data
 * Using online tool kepler.gl to locate datapoints based on latitude and longitude in Moscow
 * Identifying flaws in dataset:
-    - In testing set: seven buildings are not in Moscow. Four are  St Johns, in Kirgistan (building id 4412) and two near Vladivostock. For the ones left the coordinates are wrong (can be adjusted by searching street)
+    
 
     - In training set: complete lat/long, all within 70 km distance to center.
 
-    - Districs are missing in both datasets - they can possibly be retreived by searching for neighbouring buildings (130 examples in test set)
+ 
 
     - There are extreme outliers in area_total and price, but this seems reasonable. The bigest flats are full top floors on buildings in central Moscow.
 
@@ -36,7 +36,7 @@
 * Partly complete:
     - phones
     - new
-    - district
+    - district (Changed to complete)
     - constructed (year)
     - elevator_without
     - elevator_person
@@ -60,10 +60,19 @@
     - heating
 
 * Test set missing values:
-    - 4 items with wrong long/lat, get adress --> belong to district 11, lat(55.544045999) long(37.478055) = building id 4636 (two ap), 4412 (two ap)
-    - Possibly worng long/lat? building id 4202 (one ap) - probably correct, no match on street.
-    - Possibly woring long/lat? building id 5667 (one ap) no other hits on building in test set (what about training set?)
-    - Two rows missing lat/long for building id 3803 (two ap) belong to street with other apartements (their lat: 55.560891000 long: 37.47376099999, district 11)
+    - 4 items with wrong long/lat, get adress --> belong to district 11, lat(55.544045999) long(37.478055) = building id 4636 (two ap), 4412 (two ap)(Changed!)
+    - Possibly worng long/lat? building id 4202 (one ap) - probably correct, no match on street (Deleted)
+    - Possibly woring long/lat building id 8811 and 5667 (same street). Belong to district 8, lat=55.853511 long=37.38471099999 (Changed!)
+    - In testing set: seven buildings are not in Moscow. Four are  St Johns, in Kirgistan (building id 4412) and two near Vladivostock. For the three ones left the coordinates are wrong (can be adjusted by searching street)
+     - Districs are missing retreived by searching for neighbouring buildings street(130 examples in test set).
+     - Missing 13 district values for street = 23-i-km or 25-i-km to district = 11 (there are three other apartments on this street registered with district 11)
+     - Missing 2 district values for street pos kommunarka (all other buildings with this street is in district 11). Changed to district 11.
+     - Missing 3 district values for street V mkr. This street has district 1 and 2, but the lat/long is different from the three missing. (Two set to district 1 - building 926, coordinates closest to district 1) Last set to district 2.
+    
+* Training set missing values:
+    - Two rows missing lat/long for building id 3803 (two ap) belong to street with other apartements (their lat: 55.560891000 long: 37.47376099999, district 11)(Changed!)
+    - Missing 68 district values for street = 23-i-km to district = 11 (there are three other apartments on this street registered with district 11). Changed to district 11.
+    
 
 
 
