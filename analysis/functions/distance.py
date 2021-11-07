@@ -18,7 +18,7 @@ def get_distance(lat1, lon1, lat2=55.751244, lon2=37.618423):
          )
     c = 2 * math.atan2(np.sqrt(a), np.sqrt(1-a))
     d = R * c
-    return d
+    return d # returns km
 
 
 def norm_features(X):
@@ -35,3 +35,14 @@ def split_random(X, p):
     y_test = X[split_at:].iloc[:,:1]
     return x_train, y_train, x_test, y_test
     
+    
+def get_distance_coordinates(lat, lon, coordinates):
+    shortest = np.inf
+    for c in coordinates:
+        #dist = haversine(c, (lat, lon), unit=Unit.METERS)
+        dist = get_distance(lat, lon, c[0], c[1]) * 1000 # to get meters
+        if dist < shortest:
+            shortest = dist
+    if shortest == np.inf:
+        return 100
+    return round(shortest, 2)
