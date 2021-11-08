@@ -24,14 +24,24 @@ class MoscowHousing:
     def __init__(self, coordinates=None, 
                  data_train="../data/apartments_and_building_train.csv",
                  data_test="../data/apartments_and_building_test.csv", 
-                 metros="../prepared_data/moscow_metros.csv"):
+                 metros="../prepared_data/moscow_metros.csv", 
+                 need_correction=True,
+                 normalize=True,
+                 features_float=["area_total", 
+                                 "distance", 
+                                 "area_kitchen", 
+                                 "area_living", 
+                                 "ceiling"]):
         self.XTest = pd.read_csv(data_test)    # original train
         self.XTrain = pd.read_csv(data_train)  # original test
         self.metros = pd.read_csv(metros)      # created from capturing web data
+        self.need_correction = need_correction
+        self.normalize = normalize
         self.X_train = None
         self.X_test = None
         self.y_train = None
         self.coordinates = coordinates # Coordinates to Moscows metro stations
+        self.features_float = features_float
         self.features_all_s = ["building_id", "id_y", "seller", "area_total", 
                                "area_kitchen", "area_living", "floor", "rooms", 
                                 "layout", "ceiling", "bathrooms_shared",
@@ -45,7 +55,7 @@ class MoscowHousing:
                                 "elevator_passenger",
                                 "elevator_service", "parking", "garbage_chute",
                                 "heating"]
-
+        
         self.features_all = ["building_id", "id", "seller", "area_total", 
                              "area_kitchen", "area_living", "floor", "rooms", 
                              "layout", "ceiling", "bathrooms_shared", 
@@ -58,55 +68,54 @@ class MoscowHousing:
                              "elevator_passenger",
                              "elevator_service", "parking", "garbage_chute",
                              "heating"]
-
-        self.features_float = ["area_total", "distance", "area_kitchen",                                            "area_living", "ceiling"]
         
         self.features_final = ["area_total", "distance", "rooms", "floor",
                           "district"]
         self.initiate()
         
     def initiate(self):
+        if (self.need_correction):
         # Add removed row for building 4202 in test set (not in Moscow!)
-        df1 = pd.read_csv("../data/buildings_test.csv")
-        df2 = pd.read_csv("../data/apartments_test.csv")
-        XTestEXTRA = pd.merge(df1, df2, how='left', 
-                              left_on=["id"], 
-                              right_on=["building_id"])
-        XTestEXTRA.drop(["id_x"], axis=1)
-        XTestEXTRA = XTestEXTRA[self.features_all_s]
-        XTestEXTRA.fillna(-9, inplace=True)
-        # Change datatypes to match target data file
-        XTestEXTRA = XTestEXTRA.astype({"building_id":np.int64, "id_y":np.int64,
-                                       "seller":np.int64, "floor":np.int64,
-                                        "rooms":np.int64, "layout":np.int64,
-                                        "bathrooms_shared":np.int64, 
-                                        "bathrooms_private":np.int64,
-                                        "windows_court":np.int64,
-                                        "windows_street":np.int64,
-                                        "balconies":np.int64, "loggias":np.int64,
-                                        "condition":np.int64, "phones":np.int64,
-                                        "new":np.int64, "district":np.int64,
-                                        "constructed":np.int64, 
-                                        "material":np.int64,
-                                        "stories":np.int64,
-                                        "elevator_without":np.int64,
-                                        "elevator_passenger":np.int64,
-                                        "elevator_service":np.int64,
-                                        "parking":np.int64,
-                                        "garbage_chute":np.int64,
-                                        "heating":np.int64})
-        XTestEXTRA = XTestEXTRA.rename(columns = {"id_y": "id"})
-        Xrow_original = XTestEXTRA[XTestEXTRA["building_id"] == 4202]
-        Xrow = Xrow_original.copy()
-        # Set missing district for lat/long outside Moscow to 12
-        Xrow.loc[Xrow["district"] == -9, "district1"] = 12
-        del Xrow["district"]
-        Xrow = Xrow.rename(columns = {"district1": "district"})
-        # Add the missing row to the original Test dataset
-        self.XTest = self.XTest.append([Xrow], ignore_index=True)
+            df1 = pd.read_csv("../data/buildings_test.csv")
+            df2 = pd.read_csv("../data/apartments_test.csv")
+            XTestEXTRA = pd.merge(df1, df2, how='left', 
+                                  left_on=["id"], 
+                                  right_on=["building_id"])
+            XTestEXTRA.drop(["id_x"], axis=1)
+            XTestEXTRA = XTestEXTRA[self.features_all_s]
+            XTestEXTRA.fillna(-9, inplace=True)
+            # Change datatypes to match target data file
+            XTestEXTRA = XTestEXTRA.astype({"building_id":np.int64, "id_y":np.int64,
+                                           "seller":np.int64, "floor":np.int64,
+                                            "rooms":np.int64, "layout":np.int64,
+                                            "bathrooms_shared":np.int64, 
+                                            "bathrooms_private":np.int64,
+                                            "windows_court":np.int64,
+                                            "windows_street":np.int64,
+                                            "balconies":np.int64, "loggias":np.int64,
+                                            "condition":np.int64, "phones":np.int64,
+                                            "new":np.int64, "district":np.int64,
+                                            "constructed":np.int64, 
+                                            "material":np.int64,
+                                            "stories":np.int64,
+                                            "elevator_without":np.int64,
+                                            "elevator_passenger":np.int64,
+                                            "elevator_service":np.int64,
+                                            "parking":np.int64,
+                                            "garbage_chute":np.int64,
+                                            "heating":np.int64})
+            XTestEXTRA = XTestEXTRA.rename(columns = {"id_y": "id"})
+            Xrow_original = XTestEXTRA[XTestEXTRA["building_id"] == 4202]
+            Xrow = Xrow_original.copy()
+            # Set missing district for lat/long outside Moscow to 12
+            Xrow.loc[Xrow["district"] == -9, "district1"] = 12
+            del Xrow["district"]
+            Xrow = Xrow.rename(columns = {"district1": "district"})
+            # Add the missing row to the original Test dataset
+            self.XTest = self.XTest.append([Xrow], ignore_index=True)
         # Check if ok
         assert self.XTest.shape[0] == 9937
-        assert self.XTest.shape[1] == 33
+        #assert self.XTest.shape[1] == 33
         
         # Replace -9 with NaN
         self.XTrain = self.XTrain.replace(-9, np.NaN)
@@ -143,16 +152,17 @@ class MoscowHousing:
         # Set FINAL DATA (original data IS NOT NORMALIZED)
         self.y_train = self.XTrain["price"].copy()
         
-        # Normalize float value for "price" for y
-        self.y_train = norm_features(self.y_train)
-        self.X_train = self.XTrain.copy()
-        self.X_test = self.XTest.copy()
-        
-        # Normalize float values in X
-        self.X_train[self.features_float] = norm_features(self.X_train
-                                                          [self.features_float])
-        self.X_test[self.features_float] = norm_features(self.X_test
-                                                         [self.features_float])
+        if (self.normalize):
+            # Normalize float value for "price" for y
+            self.y_train = norm_features(self.y_train)
+            
+            # Prepare for normalizing of features
+            self.X_train = self.XTrain.copy()
+            self.X_test = self.XTest.copy()
+            self.X_train[self.features_float] = norm_features(self.X_train
+                                                              [self.features_float])
+            self.X_test[self.features_float] = norm_features(self.X_test
+                                                             [self.features_float])
     
     # Split training set into batches to train and test on "price"
     def get_data_split(self, features=None, 

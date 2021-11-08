@@ -6,6 +6,10 @@
     - In training set: complete lat/long, all within 70 km distance to center.
 
     - There are extreme outliers in area_total and price, but this seems reasonable. The bigest flats are full top floors on buildings in central Moscow.
+    
+    - There are difference in distribution for area_kitchen and stories between training and test data
+    
+
 
 * Observed in data:
     - Square meter prices highest in district 0 and 7
