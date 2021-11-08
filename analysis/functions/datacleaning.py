@@ -163,6 +163,9 @@ class MoscowHousing:
                                                               [self.features_float])
             self.X_test[self.features_float] = norm_features(self.X_test
                                                              [self.features_float])
+        else:
+            self.X_train = self.XTrain.copy()
+            self.X_test = self.XTest.copy()
     
     # Split training set into batches to train and test on "price"
     def get_data_split(self, features=None, 
