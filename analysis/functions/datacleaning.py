@@ -21,10 +21,13 @@ Add new variable "Distance" (from Moscow City Center)
 """
 
 class MoscowHousing:
-    def __init__(self, coordinates=None, data_train="../data/apartments_and_building_train.csv",
-                 data_test="../data/apartments_and_building_test.csv"):
+    def __init__(self, coordinates=None, 
+                 data_train="../data/apartments_and_building_train.csv",
+                 data_test="../data/apartments_and_building_test.csv", 
+                 metros="../prepared_data/moscow_metros.csv"):
         self.XTest = pd.read_csv(data_test)    # original train
         self.XTrain = pd.read_csv(data_train)  # original test
+        self.metros = pd.read_csv(metros)      # created from capturing web data
         self.X_train = None
         self.X_test = None
         self.y_train = None
@@ -121,17 +124,21 @@ class MoscowHousing:
         self.XTest["distance"] = self.XTest.loc[:, "latitude":"longitude"
                                                 ].apply(lambda x:                                                                                               get_distance(x.latitude, x.longitude),
                                                         axis=1)
-        if (self.coordinates != None):
-            self.XTrain["distance_metro"] = self.XTrain.loc[:, "latitude":"longitude"
-                                                            ].apply(lambda x: get_distance_coordinates
-                                                                    (x.latitude, x.longitude,
-                                                                    self.coordinates
-                                                                    ), axis=1)
-            self.XTest["distance_metro"] = self.XTest.loc[:, "latitude":"longitude"
-                                                          ].apply(lambda x: get_distance_coordinates
-                                                                  (x.latitude, x.longitude,
-                                                                  self.coordinates
-                                                                  ), axis=1)
+        # Use data captured from web scraping (used in Step_3)
+        if (self.coordinates == None):
+            self.coordinates = self.metros.values.tolist()
+            
+        self.XTrain["distance_metro"] = self.XTrain.loc[:, "latitude":"longitude"
+                                                        ].apply(lambda x: get_distance_coordinates
+                                                                (x.latitude, x.longitude,
+                                                                self.coordinates
+                                                                ), axis=1)
+        self.XTest["distance_metro"] = self.XTest.loc[:, "latitude":"longitude"
+                                                      ].apply(lambda x: get_distance_coordinates
+                                                              (x.latitude, x.longitude,
+                                                              self.coordinates
+                                                              ), axis=1)
+
 
         # Set FINAL DATA (original data IS NOT NORMALIZED)
         self.y_train = self.XTrain["price"].copy()
@@ -173,12 +180,17 @@ class MoscowHousing:
     def get_data_train(self, features=None):
         # Normalized all float variables
         if (features == None):
-            features = self.features_final
-        return self.X_train[features], self.y_train
+            return self.X_train, self.y_train
+        else:
+            return self.X_train[features], self.y_train
     
-    def get_data_test(self):
+    def get_data_test(self, features=None):
         # Normalized all float variables
-        return self.X_test
+        if (features == None):
+            return self.X_test
+        else:
+            return self.X_test[features]
+        
     
     def write_results(self, file_name, predictions, revert=True):
         if revert:
@@ -193,29 +205,7 @@ class MoscowHousing:
         
         pd.DataFrame(result).to_csv(file_name, index=False)
         
-    def set_quantiles(self, col_name, upper=0.95, lower=0.1, train=True):
-
-        if (train):
-            qhigh = self.XTrain[col_name].quantile(upper)
-            qlow  = self.XTrain[col_name].quantile(lower)
-            self.XTrain = self.XTrain[(self.XTrain
-                                       [col_name] < qhigh
-                                      ) & (self.XTrain[col_name] > qlow)]
-            if (type(self.XTrain[col_name]) == float):
-                self.X_Train[col_name] = norm_features(self.XTrain[col_name].copy())
-            else:
-                self.X_Train = self.XTrain.copy()
-        else:
-            qhigh = self.XTest[col_name].quantile(upper)
-            qlow  = self.XTest[col_name].quantile(lower)
-            self.XTest = self.XTest[(self.XTest
-                                       [col_name] < qhigh
-                                       ) & (self.XTrain[col_name] > qlow)]
-            if (type(self.XTrain[col_name]) == float):
-                self.X_Test[col_name] = norm_features(self.XTest[col_name].copy())
-            else:
-                self.X_Test[col_name] = self.XTest[col_name].copy()
-
+  
 
         
 
