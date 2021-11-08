@@ -8,22 +8,44 @@
     - There are extreme outliers in area_total and price, but this seems reasonable. The bigest flats are full top floors on buildings in central Moscow.
     
     - There are difference in distribution for area_kitchen and stories between training and test data
-    
+   
+------
+
+For assignment:
+
+* Exploratory data analysis (at least four or more items in the list):
+        * Search domain knowledge
+        * Check if data is intuitive
+        * Understand how data was generated
+        * Explore inidividual features
+        * Explore paris and groups
+        * Clean up features
+
+* Predictor used (use two or more predictors in the long notebook)
+
+* Feature engineering (one or more feature engineering techniques - feature selection or feature extraction  in the long notebook).
+
+* Model interpretation (use one or more model interpretation tecniques i.e PDP, feature importance, feature interaction, LIME.
+
+-------
 
 
 * Observed in data:
+
     - Square meter prices highest in district 0 and 7
     - Square meter prices are higher for closer distance to center, but there is still low-price apartments in these areas
     - The bigest apartments are in the center
     - z-scores are bad for apartments with the highest prices
 
 * Price of apartment may vary according to:
+
     - distance to center (use distance.py to calculate distances based on latitude and longitudes)
     - distance to nearest metro station (walking time)
     - traveltime from metro station to central Moscow
     - if the metro is within one of the two ring metro lines (or outside)
 
 * Training set values
+
 * The following are complete:
     - price
     - area_total

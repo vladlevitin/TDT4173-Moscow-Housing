@@ -149,8 +149,7 @@ class MoscowHousing:
                                                               ), axis=1)
 
 
-        # Set FINAL DATA (original data IS NOT NORMALIZED)
-        self.y_train = self.XTrain["price"].copy()
+        
         
         if (self.normalize):
             # Normalize float value for "price" for y
@@ -164,6 +163,8 @@ class MoscowHousing:
             self.X_test[self.features_float] = norm_features(self.X_test
                                                              [self.features_float])
         else:
+            # Set FINAL DATA (original data IS NOT NORMALIZED)
+            self.y_train = self.XTrain["price"].copy()
             self.X_train = self.XTrain.copy()
             self.X_test = self.XTest.copy()
     
