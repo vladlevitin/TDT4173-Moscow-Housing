@@ -219,9 +219,7 @@ class MoscowHousing:
         
         pd.DataFrame(result).to_csv(file_name, index=False)
         
-  
 
-        
 
 # Helper functions
 
