@@ -115,4 +115,21 @@ Screenshot from dataset training and testing on kepler.gl
 
 
 ## Analysis
-### Simple statistics
+### Simple statistics on data
+
+* Training set:
+
+
+- Heating has 35% missing values
+- Elevator and Elevator_no is almost complete (less than 2% missing)
+- Garbage_chute - 37.8% has nan (missing)
+- Material - 17.1% has nan (missing)
+- Condition - 42.1% has nan (missing)
+- Seller - 37.9% has nan (missing)
+- Layout - 24.2% has nan (missing)
+- New - 1.1% has nan (missing)
+
+
+* Test set:
+
+-

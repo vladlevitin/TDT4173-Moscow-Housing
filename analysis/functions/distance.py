@@ -1,6 +1,7 @@
 import numpy as np
 import math                        # degrees to radians
 from sklearn.utils import shuffle  # To randomize sequence of data
+import matplotlib.pylab as plt
 
 # The Haversine formula
 # https://en.wikipedia.org/wiki/Haversine_formula
@@ -48,10 +49,8 @@ def get_distance_coordinates(lat, lon, coordinates):
     return round(shortest, 2)
 
 
-def PCA_plot(pca_output, c, labels=None):
+def PCA_plot(pca_output, coeff, y,labels=None):
     score = pca_output[:,0:2]
-    coeff = np.transpose(c)
-    
     xs = score[:,0]
     ys = score[:,1]
     n = coeff.shape[0]
