@@ -177,7 +177,13 @@ class DataClean:
         
         # Hot-encode the following features: 
         # ["seller", "layout", "condition", "new", "material", "garbage_chute", "heating"]
-        hot = ["seller", "layout", "condition", "new", "material", "garbage_chute", "heating"]
+        hot = ["seller", "layout", "condition", "new", 
+               "material", "garbage_chute", "heating", 
+               "bathrooms_shared", "bathrooms_private",
+               "windows_court", "windows_street",
+               "balconies", "loggias",
+               "phones",
+               "parking"]
         
         hot_train = self.hot_encode(self.X_train[hot], hot)
         hot_test = self.hot_encode(self.X_test[hot], hot)
@@ -241,6 +247,9 @@ class DataClean:
                                                      
         self.X_train = self.X_train.drop(drop_elevator, axis=1)
         self.X_test = self.X_test.drop(drop_elevator, axis=1)
+        
+        self.X_train = self.X_train.astype({"elevator":np.int8, "elevator_no":np.int8})
+        self.X_test = self.X_test.astype({"elevator":np.int8, "elevator_no":np.int8})
                                                      
                                                  
         
