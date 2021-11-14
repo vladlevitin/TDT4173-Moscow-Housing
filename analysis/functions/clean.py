@@ -251,6 +251,16 @@ class DataClean:
         self.X_train = self.X_train.astype({"elevator":np.int8, "elevator_no":np.int8})
         self.X_test = self.X_test.astype({"elevator":np.int8, "elevator_no":np.int8})
                          
+            
+        # IMPUTE: area_kitchen
+        self.X_train['area_kitchen'] = self.X_train.groupby("building_id"
+                                                            ).transform(lambda x:
+                                                                        x.fillna(x.median())
+                                                                        )['area_kitchen']
+        self.X_test['area_kitchen'] = self.X_test.groupby("building_id"
+                                                          ).transform(lambda x:
+                                                                      x.fillna(x.median())
+                                                                      )['area_kitchen']
                                     
         # IMPUTE: use ["median"] from category "districts" to replace nans
         self.X_train['area_kitchen'] = self.X_train.groupby("district"
@@ -261,6 +271,16 @@ class DataClean:
                                                           ).transform(lambda x:
                                                                       x.fillna(x.median())
                                                                       )['area_kitchen']
+        
+        # IMPUTE use median from category building_id to first replace nans
+        self.X_train['area_living'] = self.X_train.groupby("building_id"
+                                                            ).transform(lambda x:
+                                                                        x.fillna(x.median())
+                                                                        )['area_living']
+        self.X_test['area_living'] = self.X_test.groupby("building_id"
+                                                          ).transform(lambda x:
+                                                                      x.fillna(x.median())
+                                                                      )['area_living']
         
         # IMPUTE: use ["median"] from category "districts" to replace nans
         self.X_train['area_living'] = self.X_train.groupby("district"
@@ -338,3 +358,23 @@ class DataClean:
 def norm_features(X):
     return (X - X.mean())/ (1.0 * X.std())
 
+def revert(X, z_score):
+        """
+        X ........... is the training set containing price data
+        
+        z_score ..... are predictions for all test examples that are 
+                      expressed as normalized with standard deviation
+        """
+        return X["price"].mean() + (z_score * X["price"].std())
+
+def write_predictions(file_name, X_train, X_test, predictions, reverting=True):
+    if reverting:
+            # Transform predictions as z-scores to actual values
+            predictions = revert(X_train, predictions) 
+    result = pd.DataFrame(predictions)
+    result["id"] = X_test["id"]
+    result["price_prediction"] = result.iloc[:,0]
+    # Skip first column
+    result = result.iloc[:,1:]
+    # Write the file
+    pd.DataFrame(result).to_csv(file_name, index=False)
