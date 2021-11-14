@@ -250,9 +250,27 @@ class DataClean:
         
         self.X_train = self.X_train.astype({"elevator":np.int8, "elevator_no":np.int8})
         self.X_test = self.X_test.astype({"elevator":np.int8, "elevator_no":np.int8})
-                                                     
-                                                 
+                         
+                                    
+        # IMPUTE: use ["median"] from category "districts" to replace nans
+        self.X_train['area_kitchen'] = self.X_train.groupby("district"
+                                                            ).transform(lambda x:
+                                                                        x.fillna(x.median())
+                                                                        )['area_kitchen']
+        self.X_test['area_kitchen'] = self.X_test.groupby("district"
+                                                          ).transform(lambda x:
+                                                                      x.fillna(x.median())
+                                                                      )['area_kitchen']
         
+        # IMPUTE: use ["median"] from category "districts" to replace nans
+        self.X_train['area_living'] = self.X_train.groupby("district"
+                                                           ).transform(lambda x:
+                                                                       x.fillna(x.median())
+                                                                       )['area_living']
+        self.X_test['area_living'] = self.X_test.groupby("district"
+                                                         ).transform(lambda x:
+                                                                     x.fillna(x.median())
+                                                                     )['area_living']
         
     def hot_encode(self, X, hot_list):
         for h in hot_list:
