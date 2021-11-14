@@ -366,11 +366,19 @@ def revert(X, z_score):
                       expressed as normalized with standard deviation
         """
         return X["price"].mean() + (z_score * X["price"].std())
+    
+def revert_log(log_score):
+    return np.exp(log_score)
 
-def write_predictions(file_name, X_train, X_test, predictions, reverting=True):
-    if reverting:
-            # Transform predictions as z-scores to actual values
-            predictions = revert(X_train, predictions) 
+def write_predictions(file_name, X_train, X_test, predictions, log=False, reverting=True):
+    if (log):
+        if reverting:
+            predictions = revert_log(predictions)
+    else:
+        if reverting:
+                # Transform predictions as z-scores to actual values
+                predictions = revert(X_train, predictions)
+                
     result = pd.DataFrame(predictions)
     result["id"] = X_test["id"]
     result["price_prediction"] = result.iloc[:,0]
