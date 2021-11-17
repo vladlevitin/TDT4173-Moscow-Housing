@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.impute import KNNImputer
 from functions.distance import get_distance, get_distance_coordinates
 
 """
@@ -26,8 +29,14 @@ class DataClean:
                  df2 = pd.read_csv("../data/buildings_train.csv"),
                  df3 = pd.read_csv("../data/apartments_test.csv"),
                  df4 = pd.read_csv("../data/buildings_test.csv"),
-                 metros = pd.read_csv("../prepared_data/moscow_metros.csv"), 
+                 metros = pd.read_csv("../data/moscow_metros.csv"),
+                 universities = pd.read_csv("../data/universities.csv"),
+                 golf = pd.read_csv("../data/golf_courses.csv"),
+                 parks = pd.read_csv("../data/parks.csv"),
+                 airports = pd.read_csv("../data/airports.csv"),
+                 shopping = pd.read_csv("../data/shopping_centers.csv"),
                  need_correction=True,
+                 prisons = pd.read_csv("../data/prisons.csv"),
                  normalize=True,
                  features_float=["area_total", 
                                  "distance",
@@ -37,13 +46,19 @@ class DataClean:
                                  "ceiling"]):
         self.XTrain = pd.merge(df1, df2, how='outer', left_on=["building_id"], right_on=["id"])
         self.XTest = pd.merge(df3, df4, how='outer', left_on=["building_id"], right_on=["id"])
-        self.metros = metros    
+        self.metros = metros
+        self.park = parks
+        self.golf = golf
+        self.airport = airports
+        self.university = universities
+        self.shopping = shopping
         self.need_correction = need_correction
+        self.imputer = IterativeImputer(random_state=42)
         self.normalize = normalize
         self.X_train = None
         self.X_test = None
         self.y_train = None
-        self.coordinates = coordinates # Coordinates to Moscows metro stations
+        self.coordinates = coordinates # Placeholder for coordinates to Moscows metro stations
         self.features_float = features_float
         self.features_all_s = ["building_id", "id_y", "seller", "area_total", 
                                "area_kitchen", "area_living", "floor", "rooms", 
@@ -77,28 +92,45 @@ class DataClean:
         self.initiate()
         
     def initiate(self):
+        # Merge the changes done in Trifacta by adding missing long/lat and districts
         if (self.need_correction):
-            # Fix id names for apartment
+            # Set "id" for apartment in the merged dataset
             self.XTrain = self.XTrain.rename(columns = {"id_x": "id"})
             self.XTest = self.XTest.rename(columns = {"id_x": "id"})
             # Drop double building ids
             self.XTrain = self.XTrain.drop(["id_y"], axis=1)
             self.XTest = self.XTest.drop(["id_y"], axis=1)
 
-            
             # Fill in missing values that are "known" both in training and testing data
             # District, Latitude, Longitude
             # Do quick correction from files preprocessed in Trifacta
             train_corr = pd.read_csv("../data/apartments_and_building_train.csv")
+            # One item was removed, id=4202
             test_corr  = pd.read_csv("../data/apartments_and_building_test.csv")
+           
+            
+            # Fix missing row in test_corr
+            Xrow_original = self.XTest[self.XTest["building_id"] == 4202]
+            Xrow = Xrow_original.copy()
+            # Set missing district for lat/long outside Moscow to 12
+            Xrow.loc[Xrow["district"] == -9, "district1"] = 12
+            del Xrow["district"]
+            Xrow = Xrow.rename(columns = {"district1": "district"})
+            # Add the missing row to the original Test dataset
+            test_corr = test_corr.append([Xrow], ignore_index=True)
             
             # Sort before exchanging columns
             self.XTrain = self.XTrain.sort_values(by=["id"])
             self.XTest = self.XTest.sort_values(by=["id"])
             
             train_corr = train_corr.sort_values(by=["id"])
-            test_corr = train_corr.sort_values(by=["id"])
+            test_corr = train_corr.sort_values(by=["id"])  
             
+            # Make sure the number of examples are the same
+            assert self.XTrain.shape[0] == train_corr.shape[0]
+            assert self.XTest.shape[0] == 9937
+            
+            # Replace all the corrected columns
             self.XTrain.loc[:,["district", "longitude", "latitude"]] = train_corr.loc[:,["district", 
                                                                                          "longitude", 
                                                                                          "latitude"]]
@@ -140,10 +172,12 @@ class DataClean:
         self.XTest["distance"] = self.XTest.loc[:, "latitude":"longitude"
                                                 ].apply(lambda x:                                                                                               get_distance(x.latitude, x.longitude),
                                                         axis=1)
-        # Use data captured from web scraping (used in Step_3)
+        
+        # Use data for metro coordinates are captured from web scraping (used in Step_3)
         if (self.coordinates == None):
             self.coordinates = self.metros.values.tolist()
             
+        # Set distance to closest metro station
         self.XTrain["distance_metro"] = self.XTrain.loc[:, "latitude":"longitude"
                                                         ].apply(lambda x: get_distance_coordinates
                                                                 (x.latitude, x.longitude,
@@ -154,6 +188,85 @@ class DataClean:
                                                               (x.latitude, x.longitude,
                                                               self.coordinates
                                                               ), axis=1)
+        
+        # Set distance to closest park
+        self.coordinates = self.park.values.tolist()
+        
+        self.XTrain["park"] = self.XTrain.loc[:, "latitude":"longitude"
+                                              ].apply(lambda x: get_distance_coordinates
+                                              (x.latitude, x.longitude,
+                                               self.coordinates
+                                               ), axis=1)
+        self.XTest["park"] = self.XTest.loc[:, "latitude":"longitude"
+                                            ].apply(lambda x: get_distance_coordinates
+                                            (x.latitude, x.longitude,
+                                             self.coordinates
+                                             ), axis=1)
+        
+        
+        # Set distance to closest golf court
+        self.coordinates = self.golf.values.tolist()
+        
+        self.XTrain["golf"] = self.XTrain.loc[:, "latitude":"longitude"
+                                              ].apply(lambda x: get_distance_coordinates
+                                              (x.latitude, x.longitude,
+                                               self.coordinates
+                                               ), axis=1)
+        
+        self.XTest["golf"] = self.XTest.loc[:, "latitude":"longitude"
+                                            ].apply(lambda x: get_distance_coordinates
+                                            (x.latitude, x.longitude,
+                                             self.coordinates
+                                             ), axis=1)
+        
+        # Set distance to closest airport
+        self.coordinates = self.airport.values.tolist()
+        
+        self.XTrain["airport"] = self.XTrain.loc[:, "latitude":"longitude"
+                                                 ].apply(lambda x: get_distance_coordinates
+                                                 (x.latitude, x.longitude,
+                                                  self.coordinates
+                                                  ), axis=1)
+        
+        self.XTest["airport"] = self.XTest.loc[:, "latitude":"longitude"
+                                               ].apply(lambda x: get_distance_coordinates
+                                                (x.latitude, x.longitude,
+                                                 self.coordinates
+                                                 ), axis=1)
+        
+        
+        # Set distance to closest university court
+        self.coordinates = self.university.values.tolist()
+        
+        self.XTrain["university"] = self.XTrain.loc[:, "latitude":"longitude"
+                                                    ].apply(lambda x: get_distance_coordinates
+                                                    (x.latitude, x.longitude,
+                                                     self.coordinates
+                                                     ), axis=1)
+        
+        self.XTest["university"] = self.XTest.loc[:, "latitude":"longitude"
+                                                  ].apply(lambda x: get_distance_coordinates
+                                                  (x.latitude, x.longitude,
+                                                   self.coordinates
+                                                   ), axis=1)
+        
+        
+        # Set distance to closest shoping center
+        self.coordinates = self.shopping.values.tolist()
+        
+        self.XTrain["shopping"] = self.XTrain.loc[:, "latitude":"longitude"
+                                                  ].apply(lambda x: get_distance_coordinates
+                                                  (x.latitude, x.longitude,
+                                                   self.coordinates
+                                                   ), axis=1)
+        self.XTest["shopping"] = self.XTest.loc[:, "latitude":"longitude"
+                                                ].apply(lambda x: get_distance_coordinates
+                                                (x.latitude, x.longitude,
+                                                 self.coordinates
+                                                 ), axis=1)
+        
+        
+        # Copy original data before feature modifications
         self.X_test = self.XTest.copy()
         self.X_train = self.XTrain.copy()
         self.y_train = self.XTrain["price"].copy()
@@ -161,11 +274,9 @@ class DataClean:
         #self.y_train = self.XTrain["price"].copy()
 
         if (self.normalize):
-            # Normalize float value for "price" for y
+            # Normalize float value for "price" for y (create z-scores)
             self.y_train = norm_features(self.y_train)
             # Prepare for normalizing of features
-            self.X_train = self.XTrain.copy()
-            self.X_test = self.XTest.copy()
             self.X_train[self.features_float] = norm_features(self.X_train
                                                               [self.features_float])
             self.X_test[self.features_float] = norm_features(self.X_test
@@ -185,20 +296,21 @@ class DataClean:
                "phones",
                "parking"]
         
-        hot_train = self.hot_encode(self.X_train[hot], hot)
-        hot_test = self.hot_encode(self.X_test[hot], hot)
+        hot_train = self.hot_encode(self.X_train[hot], hot, na=True)
+        hot_test = self.hot_encode(self.X_test[hot], hot, na=True)
         
         self.X_train = pd.concat([self.X_train, hot_train], axis=1)
         self.X_test = pd.concat([self.X_test, hot_test], axis=1)
         
-        # Remove original features that has been hot-encoded
+        # Remove the original features that now have been hot-encoded
         self.X_train = self.X_train.drop(hot, axis=1)
         self.X_test = self.X_test.drop(hot, axis=1)
         
         # Concatenate "elevator" into not - confirmed - nan
         elevator = ["elevator_without", "elevator_passenger", "elevator_service"]
-        e_train = self.hot_encode(self.X_train[elevator], elevator)
-        e_test = self.hot_encode(self.X_test[elevator], elevator)
+        
+        e_train = self.hot_encode(self.X_train[elevator], elevator, na=False)
+        e_test = self.hot_encode(self.X_test[elevator], elevator, na=False)
         
         self.X_train = pd.concat([self.X_train, e_train], axis=1)
         self.X_test = pd.concat([self.X_test, e_test], axis=1)
@@ -207,13 +319,15 @@ class DataClean:
         self.X_train = self.X_train.drop(elevator, axis=1)
         self.X_test = self.X_test.drop(elevator, axis=1)
         
+ 
+        
         # Trunkate elevator
         self.X_train["elevator"] = self.X_train.loc[:,["elevator_without_0.0", 
                                                        "elevator_passenger_1.0",
                                                        "elevator_service_1.0"
                                                        ]].apply(lambda x: x["elevator_without_0.0"] +
                                                                 x["elevator_passenger_1.0"] +
-                                                                x["elevator_service_1.0"] > 1, 
+                                                                x["elevator_service_1.0"] > 0.9, 
                                                                 axis=1)
                                                     
         self.X_test["elevator"] = self.X_test.loc[:,["elevator_without_0.0", 
@@ -221,7 +335,7 @@ class DataClean:
                                                      "elevator_service_1.0"
                                                      ]].apply(lambda x: x["elevator_without_0.0"] +
                                                               x["elevator_passenger_1.0"] +
-                                                              x["elevator_service_1.0"] > 1, 
+                                                              x["elevator_service_1.0"] > 0.9, 
                                                               axis=1)
                                                     
         self.X_train["elevator_no"] = self.X_train.loc[:,["elevator_without_1.0", 
@@ -229,21 +343,19 @@ class DataClean:
                                                           "elevator_service_0.0"
                                                           ]].apply(lambda x: x["elevator_without_1.0"] +
                                                                    x["elevator_passenger_0.0"] +
-                                                                   x["elevator_service_0.0"] > 1,
+                                                                   x["elevator_service_0.0"] > 0.9,
                                                                    axis=1)
         self.X_test["elevator_no"] = self.X_test.loc[:,["elevator_without_1.0", 
                                                         "elevator_passenger_0.0",
                                                         "elevator_service_0.0"
                                                         ]].apply(lambda x: x["elevator_without_1.0"] +
                                                                  x["elevator_passenger_0.0"] +
-                                                                 x["elevator_service_0.0"] > 1, 
+                                                                 x["elevator_service_0.0"] > 0.9, 
                                                                  axis=1)
-        # Remove used + nan (not kept nan)
+        # Remove used (not hot-encoded nan)
         drop_elevator = ["elevator_without_0.0","elevator_passenger_1.0", 
                          "elevator_service_1.0","elevator_without_1.0", 
-                         "elevator_passenger_0.0", "elevator_service_0.0",
-                         "elevator_service_nan", "elevator_passenger_nan",
-                         "elevator_without_nan"]
+                         "elevator_passenger_0.0", "elevator_service_0.0"]
                                                      
         self.X_train = self.X_train.drop(drop_elevator, axis=1)
         self.X_test = self.X_test.drop(drop_elevator, axis=1)
@@ -253,48 +365,62 @@ class DataClean:
                          
             
         # IMPUTE: area_kitchen
-        self.X_train['area_kitchen'] = self.X_train.groupby("building_id"
+        self.X_train["area_kitchen"] = self.X_train.groupby("building_id"
                                                             ).transform(lambda x:
                                                                         x.fillna(x.median())
-                                                                        )['area_kitchen']
-        self.X_test['area_kitchen'] = self.X_test.groupby("building_id"
+                                                                        )["area_kitchen"]
+        self.X_test["area_kitchen"] = self.X_test.groupby("building_id"
                                                           ).transform(lambda x:
                                                                       x.fillna(x.median())
-                                                                      )['area_kitchen']
+                                                                      )["area_kitchen"]
                                     
         # IMPUTE: use ["median"] from category "districts" to replace nans
-        self.X_train['area_kitchen'] = self.X_train.groupby("district"
+        self.X_train["area_kitchen"] = self.X_train.groupby("district"
                                                             ).transform(lambda x:
                                                                         x.fillna(x.median())
-                                                                        )['area_kitchen']
-        self.X_test['area_kitchen'] = self.X_test.groupby("district"
+                                                                        )["area_kitchen"]
+        
+        self.X_test["area_kitchen"] = self.X_test.groupby("district"
                                                           ).transform(lambda x:
                                                                       x.fillna(x.median())
-                                                                      )['area_kitchen']
+                                                                      )["area_kitchen"]
         
         # IMPUTE use median from category building_id to first replace nans
-        self.X_train['area_living'] = self.X_train.groupby("building_id"
-                                                            ).transform(lambda x:
-                                                                        x.fillna(x.median())
-                                                                        )['area_living']
-        self.X_test['area_living'] = self.X_test.groupby("building_id"
-                                                          ).transform(lambda x:
-                                                                      x.fillna(x.median())
-                                                                      )['area_living']
+        self.X_train["area_living"] = self.X_train.groupby("building_id"
+                                                           ).transform(lambda x:
+                                                                       x.fillna(x.median())
+                                                                       )["area_living"]
+        
+        self.X_test["area_living"] = self.X_test.groupby("building_id"
+                                                         ).transform(lambda x:
+                                                                     x.fillna(x.median())
+                                                                     )["area_living"]
         
         # IMPUTE: use ["median"] from category "districts" to replace nans
-        self.X_train['area_living'] = self.X_train.groupby("district"
+        self.X_train["area_living"] = self.X_train.groupby("district"
                                                            ).transform(lambda x:
                                                                        x.fillna(x.median())
                                                                        )['area_living']
-        self.X_test['area_living'] = self.X_test.groupby("district"
+        
+        self.X_test["area_living"] = self.X_test.groupby("district"
                                                          ).transform(lambda x:
                                                                      x.fillna(x.median())
                                                                      )['area_living']
         
-    def hot_encode(self, X, hot_list):
+        # Iterative impute of feature "constructed"
+        features_impute = ["constructed"]
+        imputer = IterativeImputer(random_state=42)
+        
+        imputed1 = imputer.fit_transform(self.X_train[features_impute])
+        self.X_train[features_impute] = pd.DataFrame(imputed1, columns=features_impute)
+        
+        imputed2 = imputer.fit_transform(self.X_test[features_impute])
+        self.X_test[features_impute] = pd.DataFrame(imputed2, columns=features_impute)
+        
+        
+    def hot_encode(self, X, hot_list, na=True):
         for h in hot_list:
-            df = pd.get_dummies(X[h], prefix=h, dummy_na=True)
+            df = pd.get_dummies(X[h], prefix=h, dummy_na=na)
             X = pd.concat([X, df], axis=1)
         return X
 

@@ -24,7 +24,7 @@ class MoscowHousing:
     def __init__(self, coordinates=None, 
                  data_train="../data/apartments_and_building_train.csv",
                  data_test="../data/apartments_and_building_test.csv", 
-                 metros="../prepared_data/moscow_metros.csv", 
+                 metros="../data/moscow_metros.csv", 
                  need_correction=True,
                  normalize=True,
                  features_float=["area_total", 
