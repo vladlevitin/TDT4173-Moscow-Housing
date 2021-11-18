@@ -617,6 +617,14 @@ def revert(X, z_score):
         """
         return X["price"].mean() + (z_score * X["price"].std())
     
+# If price is first np.log(price) and then normalized before analysis
+def revert_ln(X, pred):
+    ln_X = np.log(X)
+    ln_X_mean = ln_X.mean()
+    ln_X_std = ln_X.std()
+    # pred are normalized/standardized np.log(y) predictions
+    return np.exp(ln_X_mean + (ln_X_std * pred))
+    
 def revert_log(log_score):
     return np.exp(log_score)
 
