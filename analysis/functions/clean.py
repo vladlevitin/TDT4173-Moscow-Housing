@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.impute import KNNImputer
+from sklearn.linear_model import BayesianRidge
 from functions.distance import get_distance, get_distance_coordinates
 
 """
@@ -24,7 +25,9 @@ Add new variable "Distance" (from Moscow City Center)
 """
 
 class DataClean:
-    def __init__(self, coordinates=None, 
+    def __init__(self, 
+                 coordinates=None,
+                 features_float=None,
                  df1 = pd.read_csv("../data/apartments_train.csv"),
                  df2 = pd.read_csv("../data/buildings_train.csv"),
                  df3 = pd.read_csv("../data/apartments_test.csv"),
@@ -35,15 +38,9 @@ class DataClean:
                  parks = pd.read_csv("../data/parks.csv"),
                  airports = pd.read_csv("../data/airports.csv"),
                  shopping = pd.read_csv("../data/shopping_centers.csv"),
-                 need_correction=True,
                  prisons = pd.read_csv("../data/prisons.csv"),
-                 normalize=True,
-                 features_float=["area_total", 
-                                 "distance",
-                                 "distance_metro",
-                                 "area_kitchen", 
-                                 "area_living", 
-                                 "ceiling"]):
+                 need_correction=True,
+                 normalize=True):
         self.XTrain = pd.merge(df1, df2, how='outer', left_on=["building_id"], right_on=["id"])
         self.XTest = pd.merge(df3, df4, how='outer', left_on=["building_id"], right_on=["id"])
         self.metros = metros
@@ -52,8 +49,14 @@ class DataClean:
         self.airport = airports
         self.university = universities
         self.shopping = shopping
+        self.prison = prisons
         self.need_correction = need_correction
-        self.imputer = IterativeImputer(random_state=42)
+        # Setting IMPUTER
+        self.imputer = IterativeImputer(estimator=BayesianRidge(),
+                                        random_state=42,
+                                        imputation_order='ascending', 
+                                        max_iter=100,
+                                        tol=1e-5)
         self.normalize = normalize
         self.X_train = None
         self.X_test = None
@@ -139,7 +142,6 @@ class DataClean:
                                                                                        "latitude"]]
             
 
-            
             
             """
         
@@ -265,27 +267,32 @@ class DataClean:
                                                  self.coordinates
                                                  ), axis=1)
         
+        # Set distance to closest prison
+        self.coordinates = self.prison.values.tolist()
         
-        # Copy original data before feature modifications
+        self.XTrain["prison"] = self.XTrain.loc[:, "latitude":"longitude"
+                                                ].apply(lambda x: get_distance_coordinates
+                                                (x.latitude, x.longitude,
+                                                 self.coordinates
+                                                 ), axis=1)
+        self.XTest["prison"] = self.XTest.loc[:, "latitude":"longitude"
+                                              ].apply(lambda x: get_distance_coordinates
+                                              (x.latitude, x.longitude,
+                                               self.coordinates
+                                               ), axis=1)
+        
+        
+        # Copy original data before further feature modifications
         self.X_test = self.XTest.copy()
         self.X_train = self.XTrain.copy()
         self.y_train = self.XTrain["price"].copy()
         
-        #self.y_train = self.XTrain["price"].copy()
-
-        if (self.normalize):
-            # Normalize float value for "price" for y (create z-scores)
-            self.y_train = norm_features(self.y_train)
-            # Prepare for normalizing of features
-            self.X_train[self.features_float] = norm_features(self.X_train
-                                                              [self.features_float])
-            self.X_test[self.features_float] = norm_features(self.X_test
-                                                             [self.features_float])
-            
+        """   
         # Set missing ceiling values to mean (currently ceiling is z-scores, so mean = 0)
         self.X_train["ceiling"] = self.X_train["ceiling"].fillna(0)
         self.X_test["ceiling"] = self.X_test["ceiling"].fillna(0)
-        
+        """
+
         # Hot-encode the following features: 
         # ["seller", "layout", "condition", "new", "material", "garbage_chute", "heating"]
         hot = ["seller", "layout", "condition", "new", 
@@ -294,7 +301,8 @@ class DataClean:
                "windows_court", "windows_street",
                "balconies", "loggias",
                "phones",
-               "parking"]
+               "parking",
+               "district"]
         
         hot_train = self.hot_encode(self.X_train[hot], hot, na=True)
         hot_test = self.hot_encode(self.X_test[hot], hot, na=True)
@@ -318,8 +326,6 @@ class DataClean:
         # Remove original features that has been hot-encoded
         self.X_train = self.X_train.drop(elevator, axis=1)
         self.X_test = self.X_test.drop(elevator, axis=1)
-        
- 
         
         # Trunkate elevator
         self.X_train["elevator"] = self.X_train.loc[:,["elevator_without_0.0", 
@@ -345,25 +351,128 @@ class DataClean:
                                                                    x["elevator_passenger_0.0"] +
                                                                    x["elevator_service_0.0"] > 0.9,
                                                                    axis=1)
+        
         self.X_test["elevator_no"] = self.X_test.loc[:,["elevator_without_1.0", 
                                                         "elevator_passenger_0.0",
                                                         "elevator_service_0.0"
-                                                        ]].apply(lambda x: x["elevator_without_1.0"] +
+                                                        ]].apply(lambda x: 
+                                                                 x["elevator_without_1.0"] +
                                                                  x["elevator_passenger_0.0"] +
-                                                                 x["elevator_service_0.0"] > 0.9, 
+                                                                 x["elevator_service_0.0"] > 0.9,
                                                                  axis=1)
-        # Remove used (not hot-encoded nan)
-        drop_elevator = ["elevator_without_0.0","elevator_passenger_1.0", 
-                         "elevator_service_1.0","elevator_without_1.0", 
-                         "elevator_passenger_0.0", "elevator_service_0.0"]
-                                                     
-        self.X_train = self.X_train.drop(drop_elevator, axis=1)
-        self.X_test = self.X_test.drop(drop_elevator, axis=1)
+
+        # Trunkate balconies, loggias, bathrooms_shared, bathrooms_private
+        self.X_train["balconies_yes"] = self.X_train.loc[:,["balconies_1.0", "balconies_2.0",
+                                                         "balconies_3.0", "balconies_4.0"
+                                                         ]].apply(lambda x: 
+                                                                  x["balconies_1.0"] +
+                                                                  x["balconies_2.0"] +
+                                                                  x["balconies_3.0"] + 
+                                                                  x["balconies_4.0"] > 0.9, 
+                                                                  axis=1)
+                                                                 
+                                                                 
+        self.X_train["loggias_yes"] = self.X_train.loc[:,["loggias_1.0", "loggias_2.0",
+                                                       "loggias_3.0", "loggias_4.0"
+                                                       ]].apply(lambda x: 
+                                                                x["loggias_1.0"] +
+                                                                x["loggias_2.0"] +
+                                                                x["loggias_3.0"] + 
+                                                                x["loggias_4.0"] 
+                                                                > 0.9, axis=1)
+
+
+        self.X_train["bathrooms_shared_yes"] = self.X_train.loc[:,["bathrooms_shared_1.0",                                                                               "bathrooms_shared_2.0",
+                                                                "bathrooms_shared_3.0",
+                                                                "bathrooms_shared_4.0"
+                                                                ]].apply(lambda x:
+                                                                         x["bathrooms_shared_1.0"] +
+                                                                         x["bathrooms_shared_2.0"] +
+                                                                         x["bathrooms_shared_3.0"] + 
+                                                                         x["bathrooms_shared_4.0"]
+                                                                         > 0.9, axis=1)
+                                                                 
+        self.X_train["bathrooms_private_yes"] = self.X_train.loc[:,["bathrooms_private_1.0",                                                                              "bathrooms_private_2.0",
+                                                                 "bathrooms_private_3.0",
+                                                                 "bathrooms_private_4.0"
+                                                                 ]].apply(lambda x:
+                                                                          x["bathrooms_private_1.0"] +
+                                                                          x["bathrooms_private_2.0"] +
+                                                                          x["bathrooms_private_3.0"] + 
+                                                                          x["bathrooms_private_4.0"] 
+                                                                          > 0.9, axis=1)
         
-        self.X_train = self.X_train.astype({"elevator":np.int8, "elevator_no":np.int8})
-        self.X_test = self.X_test.astype({"elevator":np.int8, "elevator_no":np.int8})
+        self.X_test["balconies_yes"] = self.X_test.loc[:,["balconies_1.0", "balconies_2.0",
+                                                       "balconies_3.0", "balconies_4.0"
+                                                       ]].apply(lambda x: 
+                                                                x["balconies_1.0"] +
+                                                                x["balconies_2.0"] +
+                                                                x["balconies_3.0"] + 
+                                                                x["balconies_4.0"] > 0.9, 
+                                                                axis=1)
+                                                                 
+                                                                 
+        self.X_test["loggias_yes"] = self.X_test.loc[:,["loggias_1.0", "loggias_2.0",
+                                                     "loggias_3.0", "loggias_4.0"
+                                                     ]].apply(lambda x: 
+                                                              x["loggias_1.0"] +
+                                                              x["loggias_2.0"] +
+                                                              x["loggias_3.0"] + 
+                                                              x["loggias_4.0"] > 0.9, 
+                                                              axis=1)
+
+
+        self.X_test["bathrooms_shared_yes"] = self.X_test.loc[:,["bathrooms_shared_1.0",                                                                               "bathrooms_shared_2.0",
+                                                              "bathrooms_shared_3.0",
+                                                              "bathrooms_shared_4.0"
+                                                              ]].apply(lambda x:
+                                                                       x["bathrooms_shared_1.0"] +
+                                                                       x["bathrooms_shared_2.0"] +
+                                                                       x["bathrooms_shared_3.0"] + 
+                                                                       x["bathrooms_shared_4.0"] > 0.9, 
+                                                                       axis=1)
+                                                                 
+        self.X_test["bathrooms_private_yes"] = self.X_test.loc[:,["bathrooms_private_1.0",                                                                              "bathrooms_private_2.0",
+                                                               "bathrooms_private_3.0",
+                                                               "bathrooms_private_4.0"
+                                                               ]].apply(lambda x:
+                                                                        x["bathrooms_private_1.0"] +
+                                                                        x["bathrooms_private_2.0"] +
+                                                                        x["bathrooms_private_3.0"] + 
+                                                                        x["bathrooms_private_4.0"] 
+                                                                        > 0.9, axis=1)
+        # Remove used (except the hot-encoded nan features)
+        drop_h = ["elevator_without_0.0","elevator_passenger_1.0", 
+                  "elevator_service_1.0","elevator_without_1.0", 
+                  "elevator_passenger_0.0", "elevator_service_0.0",
+                  "bathrooms_private_1.0", "bathrooms_private_2.0",
+                  "bathrooms_private_3.0", "bathrooms_private_4.0",
+                  "bathrooms_shared_1.0", "bathrooms_shared_2.0",
+                  "bathrooms_shared_3.0", "bathrooms_shared_4.0",
+                  "loggias_1.0", "loggias_2.0","loggias_3.0", 
+                  "loggias_4.0", "balconies_1.0", "balconies_2.0",
+                  "balconies_3.0", "balconies_4.0"]
+                                                     
+        self.X_train = self.X_train.drop(drop_h, axis=1)
+        self.X_test = self.X_test.drop(drop_h, axis=1)
+        
+        self.X_train = self.X_train.astype({"elevator":np.int8, 
+                                            "elevator_no":np.int8,
+                                            "balconies_yes":np.int8,
+                                            "loggias_yes":np.int8,
+                                            "bathrooms_shared_yes":np.int8,
+                                            "bathrooms_private_yes":np.int8})
+        
+        self.X_test = self.X_test.astype({"elevator":np.int8, 
+                                          "elevator_no":np.int8,
+                                          "balconies_yes":np.int8,
+                                          "loggias_yes":np.int8,
+                                          "bathrooms_shared_yes":np.int8,
+                                          "bathrooms_private_yes":np.int8})
+        
+        
                          
-            
+        """    
         # IMPUTE: area_kitchen
         self.X_train["area_kitchen"] = self.X_train.groupby("building_id"
                                                             ).transform(lambda x:
@@ -405,10 +514,22 @@ class DataClean:
         self.X_test["area_living"] = self.X_test.groupby("district"
                                                          ).transform(lambda x:
                                                                      x.fillna(x.median())
-                                                                     )['area_living']
+                                                                    )['area_living']
+        """ 
+
         
+        if (self.normalize):
+            # Normalize float value for "price" for y (create z-scores) NOT HERE!
+            #self.y_train = norm_features(self.y_train)
+            # Prepare for normalizing of features
+            # Pass the float features as a list [] in constructor
+            self.X_train[self.features_float] = norm_features(self.X_train
+                                                              [self.features_float])
+            self.X_test[self.features_float] = norm_features(self.X_test
+                                                             [self.features_float])
+            
         # Iterative impute of feature "constructed"
-        features_impute = ["constructed"]
+        features_impute = ["constructed", "area_kitchen", "area_living", "ceiling"]
         imputer = IterativeImputer(random_state=42)
         
         imputed1 = imputer.fit_transform(self.X_train[features_impute])
@@ -416,6 +537,9 @@ class DataClean:
         
         imputed2 = imputer.fit_transform(self.X_test[features_impute])
         self.X_test[features_impute] = pd.DataFrame(imputed2, columns=features_impute)
+        
+        
+        
         
         
     def hot_encode(self, X, hot_list, na=True):
